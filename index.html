@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel Planr | Smart Trip Planner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom styles */
+        .day-card {
+            transition: all 0.3s ease;
+            min-height: 150px;
+        }
+        .day-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .activity-item {
+            transition: all 0.2s ease;
+            cursor: move;
+        }
+        .activity-item:hover {
+            background-color: #f8fafc;
+        }
+        .activity-item.dragging {
+            opacity: 0.5;
+            border: 2px dashed #3b82f6;
+        }
+        .drop-area {
+            min-height: 80px;
+            transition: all 0.2s ease;
+        }
+        .drop-area.highlight {
+            background-color: rgba(59, 130, 246, 0.1);
+            border: 2px dashed #3b82f6;
+            border-radius: 0.5rem;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-blue-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-plane-departure text-2xl"></i>
+                <span class="text-xl font-bold">Travel Planr</span>
+            </div>
+            <div class="hidden md:flex space-x-6 items-center">
+                <a href="#" class="hover:text-blue-200">My Trips</a>
+                <a href="#" class="hover:text-blue-200">Discover</a>
+                <a href="#" class="hover:text-blue-200">Inspiration</a>
+                <button id="authBtn" class="bg-white text-blue-600 px-4 py-2 rounded-full font-medium hover:bg-blue-50 transition">
+                    Sign In
+                </button>
+            </div>
+            <button class="md:hidden text-2xl">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8">
+        <!-- Trip Header -->
+        <div class="bg-white rounded-xl shadow-md p-6 mb-8 animate-fade">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">My Thailand Adventure</h1>
+                    <div class="flex items-center text-gray-600 space-x-4">
+                        <div class="flex items-center">
+                            <i class="fas fa-calendar-alt mr-2 text-blue-500"></i>
+                            <span>Jun 10 - Jun 25, 2023</span>
+                        </div>
+                        <div class="flex items-center">
+                            <i class="fas fa-users mr-2 text-blue-500"></i>
+                            <span>2 travelers</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 md:mt-0 flex space-x-3">
+                    <button class="px-4 py-2 bg-blue-100 text-blue-600 rounded-full flex items-center space-x-2 hover:bg-blue-200 transition">
+                        <i class="fas fa-share-alt"></i>
+                        <span>Share</span>
+                    </button>
+                    <button class="px-4 py-2 bg-blue-600 text-white rounded-full flex items-center space-x-2 hover:bg-blue-700 transition">
+                        <i class="fas fa-file-pdf"></i>
+                        <span>Export PDF</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Days Navigation -->
+            <div class="lg:w-1/4">
+                <div class="bg-white rounded-xl shadow-md p-4 sticky top-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold text-gray-800">Trip Days</h2>
+                        <button id="addDayBtn" class="text-blue-500 hover:text-blue-700">
+                            <i class="fas fa-plus-circle text-xl"></i>
+                        </button>
+                    </div>
+                    <ul id="daysList" class="space-y-2">
+                        <!-- Days will be added here -->
+                    </ul>
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-800 mb-2">Trip Notes</h3>
+                        <textarea class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows="4" placeholder="Add notes about your trip..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day Planner -->
+            <div class="lg:w-3/4">
+                <div id="dayPlanner" class="bg-white rounded-xl shadow-md p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 id="currentDayTitle" class="text-2xl font-bold text-gray-800">Select a day to plan</h2>
+                        <button id="addActivityBtn" class="hidden px-4 py-2 bg-blue-600 text-white rounded-full flex items-center space-x-2 hover:bg-blue-700 transition">
+                            <i class="fas fa-plus"></i>
+                            <span>Add Activity</span>
+                        </button>
+                    </div>
+
+                    <div id="activitiesContainer" class="space-y-4">
+                        <!-- Empty state -->
+                        <div id="emptyState" class="text-center py-12">
+                            <i class="fas fa-calendar-plus text-5xl text-gray-300 mb-4"></i>
+                            <h3 class="text-xl font-medium text-gray-600 mb-2">No day selected</h3>
+                            <p class="text-gray-500 mb-4">Select a day from the sidebar or create a new one to start planning</p>
+                            <button id="addDayBtn2" class="px-6 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition">
+                                Add New Day
+                            </button>
+                        </div>
+
+                        <!-- Activities will be added here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activity Modal -->
+    <div id="activityModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 animate-fade">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-gray-800">Add New Activity</h3>
+                    <button id="closeModalBtn" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <form id="activityForm">
+                    <div class="space-y-4">
+                        <div>
+                            <label for="activityTitle" class="block text-sm font-medium text-gray-700 mb-1">Activity Name</label>
+                            <input type="text" id="activityTitle" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ex: Visit Grand Palace" required>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="startTime" class="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+                                <input type="time" id="startTime" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                            </div>
+                            <div>
+                                <label for="endTime" class="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+                                <input type="time" id="endTime" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                        </div>
+                        <div>
+                            <label for="activityType" class="block text-sm font-medium text-gray-700 mb-1">Activity Type</label>
+                            <select id="activityType" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="sightseeing">Sightseeing</option>
+                                <option value="dining">Dining</option>
+                                <option value="transport">Transport</option>
+                                <option value="hotel">Hotel</option>
+                                <option value="activity">Activity</option>
+                                <option value="shopping">Shopping</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="activityNotes" class="block text-sm font-medium text-gray-700 mb-1">Notes/Links</label>
+                            <textarea id="activityNotes" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows="3" placeholder="Add any details, links, or notes..."></textarea>
+                        </div>
+                    </div>
+                    <div class="mt-6 flex justify-end space-x-3">
+                        <button type="button" id="cancelActivityBtn" class="px-4 py-2 border border-gray-300 rounded-full text-gray-700 hover:bg-gray-100 transition">Cancel</button>
+                        <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition">Save Activity</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // State management
+            let currentTrip = {
+                title: "My Thailand Adventure",
+                startDate: "2023-06-10",
+                endDate: "2023-06-25",
+                notes: "",
+                days: []
+            };
+
+            let currentDayId = null;
+            let draggedActivity = null;
+
+            // DOM Elements
+            const daysList = document.getElementById('daysList');
+            const activitiesContainer = document.getElementById('activitiesContainer');
+            const emptyState = document.getElementById('emptyState');
+            const currentDayTitle = document.getElementById('currentDayTitle');
+            const addDayBtn = document.getElementById('addDayBtn');
+            const addDayBtn2 = document.getElementById('addDayBtn2');
+            const addActivityBtn = document.getElementById('addActivityBtn');
+            const activityModal = document.getElementById('activityModal');
+            const closeModalBtn = document.getElementById('closeModalBtn');
+            const cancelActivityBtn = document.getElementById('cancelActivityBtn');
+            const activityForm = document.getElementById('activityForm');
+
+            // Initialize the app with sample data
+            function initApp() {
+                if (currentTrip.days.length === 0) {
+                    addNewDay("Arrival Day");
+                    addNewDay("Exploring Bangkok");
+                    addNewDay("Day Trip");
+                }
+                renderDaysList();
+            }
+
+            // Render days list in the sidebar
+            function renderDaysList() {
+                daysList.innerHTML = '';
+                currentTrip.days.forEach(day => {
+                    const dayElement = document.createElement('li');
+                    dayElement.className = `day-item p-3 rounded-lg cursor-pointer ${day.id === currentDayId ? 'bg-blue-100 border-l-4 border-blue-500' : 'hover:bg-gray-100'}`;
+                    dayElement.dataset.dayId = day.id;
+                    dayElement.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h3 class="font-medium text-gray-800">${day.title}</h3>
+                                <p class="text-sm text-gray-500">${getFormattedDate(day.date)}</p>
+                            </div>
+                            <span class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">${day.activities.length} activities</span>
+                        </div>
+                    `;
+                    dayElement.addEventListener('click', () => loadDay(day.id));
+                    daysList.appendChild(dayElement);
+                });
+            }
+
+            // Load a day into the planner
+            function loadDay(dayId) {
+                const day = currentTrip.days.find(d => d.id === dayId);
+                if (!day) return;
+
+                currentDayId = dayId;
+                currentDayTitle.textContent = day.title;
+                addActivityBtn.classList.remove('hidden');
+                emptyState.classList.add('hidden');
+
+                renderActivities(day.activities);
+                renderDaysList();
+            }
+
+            // Render activities for the selected day
+            function renderActivities(activities) {
+                activitiesContainer.innerHTML = '';
+                if (activities.length === 0) {
+                    activitiesContainer.innerHTML = `
+                        <div class="text-center py-12">
+                            <i class="fas fa-sun text-5xl text-gray-300 mb-4"></i>
+                            <h3 class="text-xl font-medium text-gray-600 mb-2">No activities planned</h3>
+                            <p class="text-gray-500">Add your first activity to start planning your day</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                activities.forEach((activity, index) => {
+                    const activityElement = createActivityElement(activity, index);
+                    activitiesContainer.appendChild(activityElement);
+                });
+
+                // Add drop area at the end
+                const endDropArea = document.createElement('div');
+                endDropArea.className = 'drop-area mt-4 p-4';
+                endDropArea.dataset.position = activities.length;
+                endDropArea.addEventListener('dragover', handleDragOver);
+                endDropArea.addEventListener('dragleave', handleDragLeave);
+                endDropArea.addEventListener('drop', handleDrop);
+                activitiesContainer.appendChild(endDropArea);
+            }
+
+            // Create an activity element
+            function createActivityElement(activity, position) {
+                // Create drop area above the activity (except first one)
+                const activityContainer = document.createElement('div');
+                
+                if (position > 0) {
+                    const dropArea = document.createElement('div');
+                    dropArea.className = 'drop-area p-1';
+                    dropArea.dataset.position = position;
+                    dropArea.addEventListener('dragover', handleDragOver);
+                    dropArea.addEventListener('dragleave', handleDragLeave);
+                    dropArea.addEventListener('drop', handleDrop);
+                    activityContainer.appendChild(dropArea);
+                }
+
+                // Create activity element
+                const activityElement = document.createElement('div');
+                activityElement.className = 'activity-item bg-white border border-gray-200 rounded-lg p-4 mb-2 shadow-sm flex items-start';
+                activityElement.draggable = true;
+                activityElement.dataset.activityId = activity.id;
+                
+                // Get icon based on type
+                const iconClass = getActivityIcon(activity.type);
+                
+                // Time display
+                const timeDisplay = activity.endTime 
+                    ? `${activity.startTime} - ${activity.endTime}`
+                    : activity.startTime;
+
+                activityElement.innerHTML = `
+                    <div class="flex-shrink-0 mt-1 mr-4 text-blue-500">
+                        <i class="${iconClass} fa-lg"></i>
+                    </div>
+                    <div class="flex-grow">
+                        <h3 class="font-medium text-gray-800 mb-1">${activity.title}</h3>
+                        <p class="text-sm text-gray-500 mb-2">${timeDisplay}</p>
+                        ${activity.notes ? `<p class="text-sm text-gray-600">${activity.notes}</p>` : ''}
+                    </div>
+                    <div class="flex-shrink-0 ml-4 flex space-x-2">
+                        <button class="text-gray-400 hover:text-blue-500 edit-btn">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="text-gray-400 hover:text-red-500 delete-btn">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                        <div class="text-gray-300 cursor-move drag-handle">
+                            <i class="fas fa-grip-vertical"></i>
+                        </div>
+                    </div>
+                `;
+
+                // Add event listeners
+                activityElement.addEventListener('dragstart', handleDragStart);
+                activityElement.addEventListener('dragend', handleDragEnd);
+                
+                const editBtn = activityElement.querySelector('.edit-btn');
+                editBtn.addEventListener('click', () => openEditModal(activity.id));
+                
+                const deleteBtn = activityElement.querySelector('.delete-btn');
+                deleteBtn.addEventListener('click', () => deleteActivity(activity.id));
+                
+                const dragHandle = activityElement.querySelector('.drag-handle');
+                dragHandle.addEventListener('mousedown', (e) => {
+                    e.preventDefault(); // Prevent text selection while dragging
+                });
+                
+                activityContainer.appendChild(activityElement);
+                return activityContainer;
+            }
+
+            // Add a new day to the trip
+            function addNewDay(title) {
+                const dayCount = currentTrip.days.length + 1;
+                const newDay = {
+                    id: 'day-' + Date.now(),
+                    title: title || `Day ${dayCount}`,
+                    date: calculateDayDate(dayCount),
+                    activities: []
+                };
+                currentTrip.days.push(newDay);
+                
+                if (currentTrip.days.length === 1) {
+                    // If this is the first day, select it
+                    loadDay(newDay.id);
+                }
+                
+                renderDaysList();
+            }
+
+            // Calculate date for a day based on trip start date
+            function calculateDayDate(dayNumber) {
+                const startDate = new Date(currentTrip.startDate);
+                startDate.setDate(startDate.getDate() + (dayNumber - 1));
+                return startDate.toISOString().split('T')[0];
+            }
+
+            // Format date for display
+            function getFormattedDate(dateString) {
+                const options = { weekday: 'short', month: 'short', day: 'numeric' };
+                return new Date(dateString).toLocaleDateString('en-US', options);
+            }
+
+            // Get appropriate icon for activity type
+            function getActivityIcon(type) {
+                const icons = {
+                    sightseeing: 'fas fa-camera',
+                    dining: 'fas fa-utensils',
+                    transport: 'fas fa-bus',
+                    hotel: 'fas fa-hotel',
+                    activity: 'fas fa-hiking',
+                    shopping: 'fas fa-shopping-bag'
+                };
+                return icons[type] || 'fas fa-circle';
+            }
+
+            // Open modal to add/edit activity
+            function openAddModal() {
+                activityForm.reset();
+                document.getElementById('activityForm').dataset.mode = 'add';
+                activityModal.classList.remove('hidden');
+            }
+
+            function openEditModal(activityId) {
+                const day = currentTrip.days.find(d => d.id === currentDayId);
+                if (!day) return;
+                
+                const activity = day.activities.find(a => a.id === activityId);
+                if (!activity) return;
+                
+                // Fill form with activity data
+                document.getElementById('activityTitle').value = activity.title;
+                document.getElementById('startTime').value = activity.startTime;
+                document.getElementById('endTime').value = activity.endTime || '';
+                document.getElementById('activityType').value = activity.type;
+                document.getElementById('activityNotes').value = activity.notes || '';
+                
+                document.getElementById('activityForm').dataset.mode = 'edit';
+                document.getElementById('activityForm').dataset.activityId = activityId;
+                activityModal.classList.remove('hidden');
+            }
+
+            // Save activity (add or edit)
+            function saveActivity(e) {
+                e.preventDefault();
+                
+                const form = e.target;
+                const isEditMode = form.dataset.mode === 'edit';
+                
+                const activityData = {
+                    id: isEditMode ? form.dataset.activityId : 'act-' + Date.now(),
+                    title: document.getElementById('activityTitle').value,
+                    type: document.getElementById('activityType').value,
+                    startTime: document.getElementById('startTime').value,
+                    endTime: document.getElementById('endTime').value || null,
+                    notes: document.getElementById('activityNotes').value || null
+                };
+                
+                const day = currentTrip.days.find(d => d.id === currentDayId);
+                if (!day) return;
+                
+                if (isEditMode) {
+                    // Update existing activity
+                    const activityIndex = day.activities.findIndex(a => a.id === activityData.id);
+                    if (activityIndex > -1) {
+                        day.activities[activityIndex] = activityData;
+                    }
+                } else {
+                    // Add new activity
+                    day.activities.push(activityData);
+                }
+                
+                renderActivities(day.activities);
+                renderDaysList();
+                activityModal.classList.add('hidden');
+            }
+
+            // Delete an activity
+            function deleteActivity(activityId) {
+                if (!confirm('Are you sure you want to delete this activity?')) return;
+                
+                const day = currentTrip.days.find(d => d.id === currentDayId);
+                if (!day) return;
+                
+                day.activities = day.activities.filter(a => a.id !== activityId);
+                renderActivities(day.activities);
+                renderDaysList();
+            }
+
+            // Drag and drop functions
+            function handleDragStart(e) {
+                draggedActivity = this;
+                this.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/html', this.innerHTML);
+            }
+
+            function handleDragEnd() {
+                this.classList.remove('dragging');
+            }
+
+            function handleDragOver(e) {
+                e.preventDefault();
+                this.classList.add('highlight');
+                e.dataTransfer.dropEffect = 'move';
+            }
+
+            function handleDragLeave() {
+                this.classList.remove('highlight');
+            }
+
+            function handleDrop(e) {
+                e.stopPropagation();
+                this.classList.remove('highlight');
+                
+                if (draggedActivity) {
+                    const day = currentTrip.days.find(d => d.id === currentDayId);
+                    if (!day) return;
+                    
+                    const fromId = draggedActivity.dataset.activityId;
+                    const newPosition = parseInt(this.dataset.position);
+                    
+                    // Find activity index
+                    const fromIndex = day.activities.findIndex(a => a.id === fromId);
+                    if (fromIndex < 0) return;
+                    
+                    // Remove from old position and insert at new position
+                    const [activity] = day.activities.splice(fromIndex, 1);
+                    day.activities.splice(newPosition, 0, activity);
+                    
+                    renderActivities(day.activities);
+                }
+            }
+
+            // Event listeners
+            addDayBtn.addEventListener('click', () => addNewDay());
+            addDayBtn2.addEventListener('click', () => addNewDay());
+            addActivityBtn.addEventListener('click', openAddModal);
+            closeModalBtn.addEventListener('click', () => activityModal.classList.add('hidden'));
+            cancelActivityBtn.addEventListener('click', () => activityModal.classList.add('hidden'));
+            activityForm.addEventListener('submit', saveActivity);
+
+            // Initialize the app
+            initApp();
+        });
+    </script>
+</body>
+</html>
